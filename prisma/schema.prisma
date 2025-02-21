@@ -19,3 +19,14 @@ model Movie {
   vote_average   Float?
   original_title String?
 }
+
+model Serie {
+  id             Int       @id @default(autoincrement())
+  name           String
+  overview       String?
+  first_air_date DateTime?
+  poster_path    String?
+  backdrop_path  String?
+  tmdbId         Int       @unique
+  vote_average   Float?
+}

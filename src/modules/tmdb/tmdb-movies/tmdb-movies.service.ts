@@ -30,18 +30,16 @@ export class TmdbMoviesService {
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        // Puedes acceder a error.response, error.request, y error.message aquí si lo necesitas
         console.error('Error fetching data from TMDB:', error.message);
         throw new Error(`Error fetching data from TMDB: ${error.message}`);
       }
-      // Si el error no es un AxiosError, lanza un error genérico
+
       console.error('Unknown error occurred:', error);
       throw new Error('Unknown error occurred while fetching data');
     }
   }
 
   async getPopularMovies(): Promise<MovieListResponse> {
-    // Fetch data from TMDB
     const movieList = await this.fetchFromTmdb<MovieListResponse>(
       '/movie/popular',
       {
