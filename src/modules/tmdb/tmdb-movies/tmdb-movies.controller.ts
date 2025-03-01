@@ -16,13 +16,25 @@ export class TmdbMoviesController {
   ) {}
 
   @Get()
-  async getAllMovies(): Promise<Movie[]> {
-    return await this.prisma.movie.findMany();
+  async getAllMovies(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '5',
+  ): Promise<Movie[]> {
+    return await this.prisma.movie.findMany({
+      skip: (Number(page) - 1) * Number(limit),
+      take: Number(limit),
+    });
   }
 
   @Get('tmdb/popular')
-  async getPopularMovies(): Promise<MovieListResponse> {
-    return await this.tmdbMoviesService.getPopularMovies();
+  async getPopularMovies(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '5',
+  ): Promise<MovieListResponse> {
+    return await this.tmdbMoviesService.getPopularMovies(
+      Number(page),
+      Number(limit),
+    );
   }
 
   @Get('tmdb/top-rated')

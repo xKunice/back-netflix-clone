@@ -9,7 +9,7 @@ datasource db {
 
 model Movie {
   id             Int       @id @default(autoincrement())
-  title          String
+  title          String 
   overview       String?
   release_date   DateTime?
   poster_path    String?
@@ -18,7 +18,29 @@ model Movie {
   runtime        Int?
   vote_average   Float?
   original_title String?
+  genres         MovieGenre[]
+  @@index([title])         
+  @@index([release_date]) 
+  @@index([tmdbId])   
 }
+
+model Genre {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique 
+  movieGenres MovieGenre[]
+  @@index([name]) 
+}
+
+model MovieGenre{
+  movieId   Int
+  genreId   Int
+  movie     Movie     @relation(fields: [movieId], references: [id])
+  genre     Genre     @relation(fields: [genreId], references: [id])
+  @@id([movieId, genreId]) 
+  @@index([genreId])       
+
+}
+
 
 model Serie {
   id             Int       @id @default(autoincrement())

@@ -39,11 +39,15 @@ export class TmdbMoviesService {
     }
   }
 
-  async getPopularMovies(): Promise<MovieListResponse> {
+  async getPopularMovies(
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<MovieListResponse> {
     const movieList = await this.fetchFromTmdb<MovieListResponse>(
       '/movie/popular',
       {
         language: 'es-ES',
+        page: page.toString(),
       },
     );
 
@@ -73,7 +77,7 @@ export class TmdbMoviesService {
       data: moviesToSave,
       skipDuplicates: true,
     });
-
+    movieList.results = movieList.results.slice(0, limit);
     return movieList;
   }
 
@@ -96,51 +100,80 @@ export class TmdbMoviesService {
   }
 
   async getMovieDetails(movieId: string): Promise<MovieDetails> {
-    // Buscar en la base de datos
     let movie = await this.prisma.movie.findUnique({
       where: { tmdbId: Number(movieId) },
+      include: { genres: { include: { genre: true } } },
     });
 
-    // Si no existe o si el runtime es null, obtener detalles y actualizar en la BD
     if (!movie || movie.runtime === null) {
       const movieDetails = await this.fetchFromTmdb<MovieDetails>(
         `/movie/${movieId}`,
-        {
-          language: 'es-ES',
-        },
+        { language: 'es-ES' },
       );
 
-      // Si la película no estaba en la base de datos, guardarla
+      if (!movieDetails || !movieDetails.title || !movieDetails.id) {
+        throw new Error('Invalid data from TMDB API');
+      }
+
+      const movieData = {
+        title: movieDetails.title,
+        overview: movieDetails.overview || null,
+        release_date: movieDetails.release_date
+          ? new Date(movieDetails.release_date)
+          : null,
+        poster_path: movieDetails.poster_path || null,
+        backdrop_path: movieDetails.backdrop_path || null,
+        tmdbId: movieDetails.id,
+        runtime: movieDetails.runtime || null,
+        vote_average: movieDetails.vote_average || null,
+        original_title: movieDetails.original_title || null,
+      };
+
       if (!movie) {
         movie = await this.prisma.movie.create({
-          data: {
-            title: movieDetails.title,
-            overview: movieDetails.overview || null,
-            release_date: movieDetails.release_date
-              ? new Date(movieDetails.release_date)
-              : null,
-            poster_path: movieDetails.poster_path,
-            backdrop_path: movieDetails.backdrop_path,
-            tmdbId: movieDetails.id,
-            runtime: movieDetails.runtime, // Ahora sí lo guardamos
-            vote_average: movieDetails.vote_average,
-            original_title: movieDetails.original_title || null,
-          },
+          data: movieData,
+          include: { genres: { include: { genre: true } } },
         });
       } else {
-        // Si ya existía pero sin runtime, actualizarlo
-        await this.prisma.movie.update({
+        movie = await this.prisma.movie.update({
           where: { tmdbId: movieDetails.id },
-          data: { runtime: movieDetails.runtime },
+          data: movieData,
+          include: { genres: { include: { genre: true } } },
         });
       }
+
+      const genreData = movieDetails.genres.map((g) => ({ name: g.name }));
+      await this.prisma.genre.createMany({
+        data: genreData,
+        skipDuplicates: true,
+      });
+
+      const movieGenres = movieDetails.genres.map(async (g) => {
+        const genre = await this.prisma.genre.findUnique({
+          where: { name: g.name },
+        });
+        return {
+          movieId: movie!.id,
+          genreId: genre!.id,
+        };
+      });
+      await this.prisma.movieGenre.createMany({
+        data: await Promise.all(movieGenres),
+        skipDuplicates: true,
+      });
 
       return movieDetails;
     }
 
-    return movie as MovieDetails;
+    return {
+      ...movie,
+      tagline: null,
+      genres: movie.genres.map((mg) => ({
+        id: mg.genre.id,
+        name: mg.genre.name,
+      })),
+    } as MovieDetails;
   }
-
   async searchMovies(query: string): Promise<SearchResponse> {
     return this.fetchFromTmdb<SearchResponse>('/search/movie', {
       query,

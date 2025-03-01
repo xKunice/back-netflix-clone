@@ -9,6 +9,7 @@ export interface Movie {
   runtime: number | null;
   vote_average: number | null;
   original_title: string | null;
+  genres: { id: number; name: string }[];
 }
 
 export interface MovieListResponse {
@@ -19,7 +20,6 @@ export interface MovieListResponse {
 }
 
 export interface MovieDetails extends Movie {
-  genres: { id: number; name: string }[];
   tagline: string | null;
 }
 
