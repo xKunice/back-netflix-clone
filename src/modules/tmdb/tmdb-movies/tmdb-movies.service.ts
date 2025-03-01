@@ -81,22 +81,49 @@ export class TmdbMoviesService {
     return movieList;
   }
 
-  async getTopRatedMovies(): Promise<MovieListResponse> {
-    return this.fetchFromTmdb<MovieListResponse>('/movie/top_rated', {
-      language: 'es-ES',
-    });
+  async getTopRatedMovies(
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<MovieListResponse> {
+    const movieList = await this.fetchFromTmdb<MovieListResponse>(
+      '/movie/top_rated',
+      {
+        language: 'es-ES',
+        page: page.toString(),
+      },
+    );
+    movieList.results = movieList.results.slice(0, limit);
+    return movieList;
   }
 
-  async getUpcomingMovies(): Promise<MovieListResponse> {
-    return this.fetchFromTmdb<MovieListResponse>('/movie/upcoming', {
-      language: 'es-ES',
-    });
+  async getUpcomingMovies(
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<MovieListResponse> {
+    const movieList = await this.fetchFromTmdb<MovieListResponse>(
+      '/movie/upcoming',
+      {
+        language: 'es-ES',
+        page: page.toString(),
+      },
+    );
+    movieList.results = movieList.results.slice(0, limit);
+    return movieList;
   }
 
-  async getNowPlayingMovies(): Promise<MovieListResponse> {
-    return this.fetchFromTmdb<MovieListResponse>('/movie/now_playing', {
-      language: 'es-ES',
-    });
+  async getNowPlayingMovies(
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<MovieListResponse> {
+    const movieList = await this.fetchFromTmdb<MovieListResponse>(
+      '/movie/now_playing',
+      {
+        language: 'es-ES',
+        page: page.toString(),
+      },
+    );
+    movieList.results = movieList.results.slice(0, limit);
+    return movieList;
   }
 
   async getMovieDetails(movieId: string): Promise<MovieDetails> {
@@ -174,10 +201,20 @@ export class TmdbMoviesService {
       })),
     } as MovieDetails;
   }
-  async searchMovies(query: string): Promise<SearchResponse> {
-    return this.fetchFromTmdb<SearchResponse>('/search/movie', {
-      query,
-      language: 'es-ES',
-    });
+  async searchMovies(
+    query: string,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<SearchResponse> {
+    const searchResult = await this.fetchFromTmdb<SearchResponse>(
+      '/search/movie',
+      {
+        query,
+        language: 'es-ES',
+        page: page.toString(),
+      },
+    );
+    searchResult.results = searchResult.results.slice(0, limit);
+    return searchResult;
   }
 }
