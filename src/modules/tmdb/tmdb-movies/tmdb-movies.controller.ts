@@ -38,18 +38,36 @@ export class TmdbMoviesController {
   }
 
   @Get('tmdb/top-rated')
-  async getTopRatedMovies(): Promise<MovieListResponse> {
-    return await this.tmdbMoviesService.getTopRatedMovies();
+  async getTopRatedMovies(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ): Promise<MovieListResponse> {
+    return await this.tmdbMoviesService.getTopRatedMovies(
+      Number(page),
+      Number(limit),
+    );
   }
 
   @Get('tmdb/upcoming')
-  async getUpcomingMovies(): Promise<MovieListResponse> {
-    return this.tmdbMoviesService.getUpcomingMovies();
+  async getUpcomingMovies(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ): Promise<MovieListResponse> {
+    return await this.tmdbMoviesService.getUpcomingMovies(
+      Number(page),
+      Number(limit),
+    );
   }
 
   @Get('tmdb/now-playing')
-  async getNowPlayingMovies(): Promise<MovieListResponse> {
-    return this.tmdbMoviesService.getNowPlayingMovies();
+  async getNowPlayingMovies(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ): Promise<MovieListResponse> {
+    return await this.tmdbMoviesService.getNowPlayingMovies(
+      Number(page),
+      Number(limit),
+    );
   }
 
   @Get('tmdb/:id')
@@ -58,7 +76,15 @@ export class TmdbMoviesController {
   }
 
   @Get('tmdb/search')
-  async searchMovies(@Query('query') query: string): Promise<SearchResponse> {
-    return this.tmdbMoviesService.searchMovies(query);
+  async searchMovies(
+    @Query('query') query: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ): Promise<SearchResponse> {
+    return this.tmdbMoviesService.searchMovies(
+      query,
+      Number(page),
+      Number(limit),
+    );
   }
 }
