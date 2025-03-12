@@ -6,6 +6,7 @@ import {
   MovieListResponse,
   SearchResponse,
 } from './tmdb-movies.types';
+import { MovieListResponseDto } from './dto/tmdb-movies-response.dto';
 
 @Injectable()
 export class TmdbMoviesService {
@@ -287,7 +288,7 @@ export class TmdbMoviesService {
 
       if (needsRefresh) {
         console.log('Buscando en TMDB...');
-        const searchResult = await this.fetchFromTmdb<SearchResponse>(
+        const searchResult = await this.fetchFromTmdb<MovieListResponseDto>(
           '/search/movie',
           {
             query,
