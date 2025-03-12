@@ -1,11 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Movie } from '@prisma/client';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
-import {
-  MovieDetails,
-  MovieListResponse,
-  SearchResponse,
-} from './tmdb-movies.types';
+import { MovieDetails, MovieListResponse } from './tmdb-movies.types';
 import { TmdbMoviesService } from './tmdb-movies.service';
 import {
   GetMovieDetailsDto,
