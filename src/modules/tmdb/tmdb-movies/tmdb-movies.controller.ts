@@ -7,6 +7,12 @@ import {
   SearchResponse,
 } from './tmdb-movies.types';
 import { TmdbMoviesService } from './tmdb-movies.service';
+import {
+  GetMovieDetailsDto,
+  GetMoviesDto,
+  SearchMoviesDto,
+} from './dto/tmdb-movies.dto';
+import { MovieListResponseDto } from './dto/tmdb-movies-response.dto';
 
 @Controller('movies')
 export class TmdbMoviesController {
@@ -16,75 +22,54 @@ export class TmdbMoviesController {
   ) {}
 
   @Get()
-  async getAllMovies(
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '5',
-  ): Promise<Movie[]> {
+  async getAllMovies(@Query() dto: GetMoviesDto): Promise<Movie[]> {
     return await this.prisma.movie.findMany({
-      skip: (Number(page) - 1) * Number(limit),
-      take: Number(limit),
+      skip: (dto.page - 1) * dto.limit,
+      take: dto.limit,
     });
-  }
-
-  @Get('tmdb/popular')
-  async getPopularMovies(
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '5',
-  ): Promise<MovieListResponse> {
-    return await this.tmdbMoviesService.getPopularMovies(
-      Number(page),
-      Number(limit),
-    );
-  }
-
-  @Get('tmdb/top-rated')
-  async getTopRatedMovies(
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '20',
-  ): Promise<MovieListResponse> {
-    return await this.tmdbMoviesService.getTopRatedMovies(
-      Number(page),
-      Number(limit),
-    );
-  }
-
-  @Get('tmdb/upcoming')
-  async getUpcomingMovies(
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '20',
-  ): Promise<MovieListResponse> {
-    return await this.tmdbMoviesService.getUpcomingMovies(
-      Number(page),
-      Number(limit),
-    );
-  }
-
-  @Get('tmdb/now-playing')
-  async getNowPlayingMovies(
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '20',
-  ): Promise<MovieListResponse> {
-    return await this.tmdbMoviesService.getNowPlayingMovies(
-      Number(page),
-      Number(limit),
-    );
-  }
-
-  @Get('tmdb/:id')
-  async getMovieDetails(@Param('id') movieId: string): Promise<MovieDetails> {
-    return this.tmdbMoviesService.getMovieDetails(movieId);
   }
 
   @Get('tmdb/search')
   async searchMovies(
-    @Query('query') query: string,
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '20',
-  ): Promise<SearchResponse> {
-    return this.tmdbMoviesService.searchMovies(
-      query,
-      Number(page),
-      Number(limit),
+    @Query() dto: SearchMoviesDto,
+  ): Promise<MovieListResponseDto> {
+    return this.tmdbMoviesService.searchMovies(dto.query, dto.page, dto.limit);
+  }
+  @Get('tmdb/popular')
+  async getPopularMovies(
+    @Query() dto: GetMoviesDto,
+  ): Promise<MovieListResponse> {
+    return await this.tmdbMoviesService.getPopularMovies(dto.page, dto.limit);
+  }
+
+  @Get('tmdb/top-rated')
+  async getTopRatedMovies(
+    @Query() dto: GetMoviesDto,
+  ): Promise<MovieListResponse> {
+    return await this.tmdbMoviesService.getTopRatedMovies(dto.page, dto.limit);
+  }
+
+  @Get('tmdb/upcoming')
+  async getUpcomingMovies(
+    @Query() dto: GetMoviesDto,
+  ): Promise<MovieListResponse> {
+    return await this.tmdbMoviesService.getUpcomingMovies(dto.page, dto.limit);
+  }
+
+  @Get('tmdb/now-playing')
+  async getNowPlayingMovies(
+    @Query() dto: GetMoviesDto,
+  ): Promise<MovieListResponse> {
+    return await this.tmdbMoviesService.getNowPlayingMovies(
+      dto.page,
+      dto.limit,
     );
+  }
+
+  @Get('tmdb/:id')
+  async getMovieDetails(
+    @Param() dto: GetMovieDetailsDto,
+  ): Promise<MovieDetails> {
+    return this.tmdbMoviesService.getMovieDetails(dto.id);
   }
 }

@@ -43,42 +43,85 @@ export class TmdbMoviesService {
     page: number = 1,
     limit: number = 20,
   ): Promise<MovieListResponse> {
-    const movieList = await this.fetchFromTmdb<MovieListResponse>(
-      '/movie/popular',
-      {
-        language: 'es-ES',
-        page: page.toString(),
-      },
-    );
-
-    const moviesToSave = movieList.results.map((movieData) => ({
-      title: movieData.title,
-      overview: movieData.overview || null,
-      release_date: movieData.release_date
-        ? new Date(movieData.release_date)
-        : null,
-      poster_path: movieData.poster_path,
-      backdrop_path: movieData.backdrop_path,
-      tmdbId: movieData.id,
-      runtime:
-        movieData.runtime && !Number.isNaN(movieData.runtime)
-          ? movieData.runtime
-          : null,
-      vote_average:
-        movieData.vote_average && !Number.isNaN(movieData.vote_average)
-          ? movieData.vote_average
-          : null,
-      original_title: movieData.original_title || null,
-    }));
-    if (!this.prisma.movie) {
-      throw new Error('Prisma client does not have a movie property');
-    }
-    await this.prisma.movie.createMany({
-      data: moviesToSave,
-      skipDuplicates: true,
+    const localMovies = await this.prisma.movie.findMany({
+      take: limit,
+      skip: (page - 1) * limit,
+      orderBy: { vote_average: 'desc' },
+      include: { genres: { include: { genre: true } } },
     });
-    movieList.results = movieList.results.slice(0, limit);
-    return movieList;
+
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const needsRefresh =
+      localMovies.length < limit ||
+      localMovies.some((movie) => movie.updatedAt < oneDayAgo);
+
+    if (needsRefresh) {
+      const movieList = await this.fetchFromTmdb<MovieListResponse>(
+        '/movie/popular',
+        {
+          language: 'es-ES',
+          page: page.toString(),
+        },
+      );
+
+      const moviesToSave = movieList.results.map((movieData) => ({
+        tmdbId: movieData.id,
+        title: movieData.title,
+        overview: movieData.overview || null,
+        release_date: movieData.release_date
+          ? new Date(movieData.release_date)
+          : null,
+        poster_path: movieData.poster_path,
+        backdrop_path: movieData.backdrop_path,
+        runtime:
+          movieData.runtime && !Number.isNaN(movieData.runtime)
+            ? movieData.runtime
+            : null,
+        vote_average:
+          movieData.vote_average && !Number.isNaN(movieData.vote_average)
+            ? movieData.vote_average
+            : null,
+        original_title: movieData.original_title || null,
+        updatedAt: new Date(),
+      }));
+
+      if (!this.prisma.movie) {
+        throw new Error('Prisma client does not have a movie property');
+      }
+
+      for (const movie of moviesToSave) {
+        await this.prisma.movie.upsert({
+          where: { tmdbId: movie.tmdbId },
+          update: { ...movie, updatedAt: new Date() },
+          create: movie,
+        });
+      }
+
+      movieList.results = movieList.results.slice(0, limit);
+      return movieList;
+    }
+
+    return {
+      page,
+      results: localMovies.map((movie) => ({
+        id: movie.tmdbId,
+        tmdbId: movie.tmdbId,
+        title: movie.title,
+        overview: movie.overview || null,
+        release_date: movie.release_date || null,
+        poster_path: movie.poster_path,
+        backdrop_path: movie.backdrop_path,
+        runtime: movie.runtime,
+        vote_average: movie.vote_average,
+        original_title: movie.original_title,
+        genres: movie.genres.map((mg) => ({
+          id: mg.genre.id,
+          name: mg.genre.name,
+        })),
+      })),
+      total_pages: Math.ceil((await this.prisma.movie.count()) / limit),
+      total_results: await this.prisma.movie.count(),
+    };
   }
 
   async getTopRatedMovies(
@@ -127,8 +170,15 @@ export class TmdbMoviesService {
   }
 
   async getMovieDetails(movieId: string): Promise<MovieDetails> {
+    const tmdbId = Number(movieId);
+    if (isNaN(tmdbId)) {
+      throw new Error('movieId is not a valid number');
+    }
+
     let movie = await this.prisma.movie.findUnique({
-      where: { tmdbId: Number(movieId) },
+      where: {
+        tmdbId: tmdbId,
+      },
       include: { genres: { include: { genre: true } } },
     });
 
@@ -201,20 +251,133 @@ export class TmdbMoviesService {
       })),
     } as MovieDetails;
   }
+
   async searchMovies(
     query: string,
     page: number = 1,
     limit: number = 20,
   ): Promise<SearchResponse> {
-    const searchResult = await this.fetchFromTmdb<SearchResponse>(
-      '/search/movie',
-      {
+    try {
+      console.log(
+        'Iniciando búsqueda con query:',
         query,
-        language: 'es-ES',
-        page: page.toString(),
-      },
-    );
-    searchResult.results = searchResult.results.slice(0, limit);
-    return searchResult;
+        'page:',
+        page,
+        'limit:',
+        limit,
+      );
+
+      const localMovies = await this.prisma.movie.findMany({
+        where: {
+          OR: [
+            { title: { contains: query, mode: 'insensitive' } },
+            { original_title: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+        take: limit,
+        skip: (page - 1) * limit,
+        include: { genres: { include: { genre: true } } },
+      });
+
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const needsRefresh =
+        localMovies.length < limit ||
+        localMovies.some((movie) => movie.updatedAt < oneDayAgo);
+      console.log('¿Necesita refrescar?', needsRefresh);
+
+      if (needsRefresh) {
+        console.log('Buscando en TMDB...');
+        const searchResult = await this.fetchFromTmdb<SearchResponse>(
+          '/search/movie',
+          {
+            query,
+            language: 'es-ES',
+            page: page.toString(),
+          },
+        );
+        console.log('Resultados de TMDB:', searchResult.results.length);
+
+        const moviesToSave = searchResult.results.map((movieData) => ({
+          tmdbId: movieData.id,
+          title: movieData.title,
+          overview: movieData.overview || null,
+          release_date: movieData.release_date
+            ? new Date(movieData.release_date)
+            : null,
+          poster_path: movieData.poster_path,
+          backdrop_path: movieData.backdrop_path,
+          runtime:
+            movieData.runtime && !Number.isNaN(movieData.runtime)
+              ? movieData.runtime
+              : null,
+          vote_average:
+            movieData.vote_average && !Number.isNaN(movieData.vote_average)
+              ? movieData.vote_average
+              : null,
+          original_title: movieData.original_title || null,
+          updatedAt: new Date(),
+        }));
+
+        if (!this.prisma.movie) {
+          throw new Error('Prisma client does not have a movie property');
+        }
+
+        for (const movie of moviesToSave) {
+          try {
+            await this.prisma.movie.upsert({
+              where: { tmdbId: movie.tmdbId },
+              update: { ...movie, updatedAt: new Date() },
+              create: movie,
+            });
+          } catch (upsertError) {
+            console.error('Error upserting movie:', movie.tmdbId, upsertError);
+          }
+        }
+
+        searchResult.results = searchResult.results.slice(0, limit);
+        return searchResult;
+      }
+
+      console.log('Usando datos locales...');
+      const totalCount = await this.prisma.movie.count({
+        where: {
+          OR: [
+            { title: { contains: query, mode: 'insensitive' } },
+            { original_title: { contains: query, mode: 'insensitive' } },
+          ],
+        },
+      });
+      console.log('Total de películas encontradas:', totalCount);
+
+      return {
+        page,
+        results: localMovies.map((movie) => {
+          console.log('Mapeando película:', movie.title);
+          return {
+            id: movie.tmdbId,
+            tmdbId: movie.tmdbId,
+            title: movie.title,
+            overview: movie.overview || null,
+            release_date: movie.release_date || null,
+            poster_path: movie.poster_path,
+            backdrop_path: movie.backdrop_path,
+            runtime: movie.runtime,
+            vote_average: movie.vote_average,
+            original_title: movie.original_title,
+            genres: movie.genres
+              ? movie.genres.map((mg) => ({
+                  id: mg.genre.id,
+                  name: mg.genre.name,
+                }))
+              : [],
+          };
+        }),
+        total_pages: Math.ceil(totalCount / limit),
+        total_results: totalCount,
+      };
+    } catch (error) {
+      console.error('Error en searchMovies:', error);
+      throw new Error('Error al buscar películas');
+    }
   }
 }
