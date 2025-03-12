@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Movie } from '@prisma/client';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
-import { MovieDetails, MovieListResponse } from './tmdb-movies.types';
+import { MovieDetails } from './tmdb-movies.types';
 import { TmdbMoviesService } from './tmdb-movies.service';
 import {
   GetMovieDetailsDto,
@@ -34,28 +34,28 @@ export class TmdbMoviesController {
   @Get('tmdb/popular')
   async getPopularMovies(
     @Query() dto: GetMoviesDto,
-  ): Promise<MovieListResponse> {
+  ): Promise<MovieListResponseDto> {
     return await this.tmdbMoviesService.getPopularMovies(dto.page, dto.limit);
   }
 
   @Get('tmdb/top-rated')
   async getTopRatedMovies(
     @Query() dto: GetMoviesDto,
-  ): Promise<MovieListResponse> {
+  ): Promise<MovieListResponseDto> {
     return await this.tmdbMoviesService.getTopRatedMovies(dto.page, dto.limit);
   }
 
   @Get('tmdb/upcoming')
   async getUpcomingMovies(
     @Query() dto: GetMoviesDto,
-  ): Promise<MovieListResponse> {
+  ): Promise<MovieListResponseDto> {
     return await this.tmdbMoviesService.getUpcomingMovies(dto.page, dto.limit);
   }
 
   @Get('tmdb/now-playing')
   async getNowPlayingMovies(
     @Query() dto: GetMoviesDto,
-  ): Promise<MovieListResponse> {
+  ): Promise<MovieListResponseDto> {
     return await this.tmdbMoviesService.getNowPlayingMovies(
       dto.page,
       dto.limit,

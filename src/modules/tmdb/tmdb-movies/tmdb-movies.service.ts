@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { PrismaService } from 'src/modules/prisma/prisma.service';
-import {
-  MovieDetails,
-  MovieListResponse,
-  SearchResponse,
-} from './tmdb-movies.types';
+import { MovieDetails, SearchResponse } from './tmdb-movies.types';
 import { MovieListResponseDto } from './dto/tmdb-movies-response.dto';
 
 @Injectable()
@@ -43,7 +39,7 @@ export class TmdbMoviesService {
   async getPopularMovies(
     page: number = 1,
     limit: number = 20,
-  ): Promise<MovieListResponse> {
+  ): Promise<MovieListResponseDto> {
     const localMovies = await this.prisma.movie.findMany({
       take: limit,
       skip: (page - 1) * limit,
@@ -57,7 +53,7 @@ export class TmdbMoviesService {
       localMovies.some((movie) => movie.updatedAt < oneDayAgo);
 
     if (needsRefresh) {
-      const movieList = await this.fetchFromTmdb<MovieListResponse>(
+      const movieList = await this.fetchFromTmdb<MovieListResponseDto>(
         '/movie/popular',
         {
           language: 'es-ES',
@@ -128,8 +124,8 @@ export class TmdbMoviesService {
   async getTopRatedMovies(
     page: number = 1,
     limit: number = 20,
-  ): Promise<MovieListResponse> {
-    const movieList = await this.fetchFromTmdb<MovieListResponse>(
+  ): Promise<MovieListResponseDto> {
+    const movieList = await this.fetchFromTmdb<MovieListResponseDto>(
       '/movie/top_rated',
       {
         language: 'es-ES',
@@ -143,8 +139,8 @@ export class TmdbMoviesService {
   async getUpcomingMovies(
     page: number = 1,
     limit: number = 20,
-  ): Promise<MovieListResponse> {
-    const movieList = await this.fetchFromTmdb<MovieListResponse>(
+  ): Promise<MovieListResponseDto> {
+    const movieList = await this.fetchFromTmdb<MovieListResponseDto>(
       '/movie/upcoming',
       {
         language: 'es-ES',
@@ -158,8 +154,8 @@ export class TmdbMoviesService {
   async getNowPlayingMovies(
     page: number = 1,
     limit: number = 20,
-  ): Promise<MovieListResponse> {
-    const movieList = await this.fetchFromTmdb<MovieListResponse>(
+  ): Promise<MovieListResponseDto> {
+    const movieList = await this.fetchFromTmdb<MovieListResponseDto>(
       '/movie/now_playing',
       {
         language: 'es-ES',
