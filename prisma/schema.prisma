@@ -19,9 +19,11 @@ model Movie {
   vote_average   Float?
   original_title String?
   genres         MovieGenre[]
+  updatedAt      DateTime @default(now()) @updatedAt
   @@index([title])         
   @@index([release_date]) 
   @@index([tmdbId])   
+ 
 }
 
 model Genre {
